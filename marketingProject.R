@@ -3,6 +3,8 @@ library(caret) # downSample() function lives here
 library(e1071) # co-package for caret
 library(naniar) # has miss_var graph
 library(GGally)
+library(ROSE)
+library(glmnet)
 
 ## Input variables:
 
@@ -203,5 +205,194 @@ mrkt_raw %>%
   theme(
     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
   )
+
+unique(mrkt_raw[,c(17)]) ## cons.price.idx: consumer price index - monthly indicator (numeric)
+
+## A consumer price index measures changes in the price level of a weighted average market basket of consumer goods and services purchased by households (From WIKI)
+
+## [1] 93.994 94.465 93.918 93.444 93.798 93.200 92.756 92.843 93.075 92.893 92.963 92.469 92.201 92.379 
+##     92.431 92.649 92.713 93.369 93.749 93.876 94.055 94.215 94.027 94.199 94.601 94.767
+
+mrkt_raw %>%
+  ggplot() +
+  geom_histogram(
+    aes(
+      x = as.factor(cons.price.idx),
+      color = y
+    ),
+    position = "dodge",
+    stat="count"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  )
+
+unique(mrkt_raw[,c(18)]) ## 18 - cons.conf.idx: consumer confidence index - monthly indicator (numeric)
+
+## the degree of optimism on the state of the U.S. economy that consumers are expressing through their activities of savings and spending (FROM WIKI)
+
+## [1] -36.4 -41.8 -42.7 -36.1 -40.4 -42.0 -45.9 -50.0 -47.1 -46.2 -40.8 -33.6 -31.4 -29.8 -26.9 -30.1 
+##     -33.0 -34.8 -34.6 -40.0 -39.8 -40.3 -38.3 -37.5 -49.5 -50.8
+
+
+mrkt_raw %>%
+  ggplot() +
+  geom_histogram(
+    aes(
+      x = as.factor(cons.conf.idx),
+      color = y
+    ),
+    position = "dodge",
+    stat="count"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  )
+
+
+unique(mrkt_raw[,c(19)]) ## 19 - euribor3m: euribor 3 month rate - daily indicator (numeric)
+
+# This is about 300 different numbers, I would think that this is continuous
+
+## The 3 month Euribor interest rate is the interest rate at which a panel of banks lend money to one another with a maturity of 3 months.
+
+mrkt_raw %>%
+  ggplot() +
+  geom_histogram(
+    aes(
+      x = as.factor(euribor3m),
+      color = y
+    ),
+    position = "dodge",
+    stat="count"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)
+  )
+
+
+unique(mrkt_raw[,c(20)]) ## 20 - nr.employed: number of employees - quarterly indicator (numeric)
+
+## [1] 5191.0 5228.1 5195.8 5176.3 5099.1 5076.2 5017.5 5023.5 5008.7 4991.6 4963.6
+
+mrkt_raw %>%
+  ggplot() +
+  geom_histogram(
+    aes(
+      x = as.factor(nr.employed),
+      color = y
+    ),
+    position = "dodge",
+    stat="count"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)
+  )
+
+
+
+## Exploring the response variable to get a sense of what are percentage splits are
+
+percentYeses <- dim(mrkt_raw %>% filter(mrkt_raw[,21] == 'yes'))[1]/dim(mrkt_raw)[1] * 100
+
+percentNos <- dim(mrkt_raw %>% filter(mrkt_raw[,21] == 'no'))[1]/dim(mrkt_raw)[1] * 100
+
+percentCheck <- percentYeses + percentNos
+
+# There are roughly 11.3% yeses total, 88.7% nos
+
+## Try out downsampling of the data
+## Found a package called ROSE that might be better than downsampling
+
+set.seed(22)
+
+#mrkt_idx <- 
+#  sample(
+#    1:dim(mrkt_raw)[1],
+#    round(dim(mrkt_raw)[1] * 0.7),
+#    replace=F
+#  )
+
+mrkt_idx <- createDataPartition(mrkt_raw$y, p=0.7, list = F) 
+
+
+mrkt_train <- mrkt_raw[mrkt_idx,]
+mrkt_test <- mrkt_raw[-mrkt_idx,]
+
+
+
+
+## Checking the balance of the classes, they remain close to the original data
+
+dim(mrkt_train %>% filter(mrkt_train[,21] == 'yes'))[1]/dim(mrkt_train)[1] * 100
+
+dim(mrkt_train %>% filter(mrkt_train[,21] == 'no'))[1]/dim(mrkt_train)[1] * 100
+
+dim(mrkt_test %>% filter(mrkt_test[,21] == 'yes'))[1]/dim(mrkt_test)[1] * 100
+
+dim(mrkt_test %>% filter(mrkt_test[,21] == 'no'))[1]/dim(mrkt_test)[1] * 100
+
+
+
+mrkt_downSample <- downSample(x = mrkt_train[, -ncol(mrkt_train)],
+                         y = mrkt_train$y)
+
+
+mrkt_rose <- ROSE(y~., mrkt_train, seed=22)$data
+
+mrkt_log_ds <- glm(mrkt_downSample$Class ~ ., data=mrkt_downSample, family=binomial)
+
+mrkt_log_ds.pred <- predict(mrkt_log_ds, newdata=mrkt_test, type="response")
+
+
+mrkt_log_rose <- glm(y ~ ., data=mrkt_rose, family=binomial)
+
+mrkt_log_rose.pred <- predict(mrkt_log_rose, newdata=mrkt_test, type="response")
+
+
+mrkt_logit <- glm(mrkt_train$y ~ ., data=mrkt_train, family=binomial)
+
+mrkt_logit.pred <- predict(mrkt_logit, newdata=mrkt_test, type="response")
+
+
+roc.curve(mrkt_test$y, mrkt_log_ds.pred)
+
+roc.curve(mrkt_test$y, mrkt_log_rose.pred, add.roc=TRUE, col=2)
+
+roc.curve(mrkt_test$y, mrkt_logit.pred, add.roc=TRUE, col=3)
+
+dat.train.x <- model.matrix(y~., mrkt_train)
+dat.train.y<-mrkt_train[,21]
+cvfit <- cv.glmnet(dat.train.x, dat.train.y, family = "binomial", type.measure = "class", nlambda = 100)
+plot(cvfit)
+coef(cvfit, s = "lambda.min")
+#CV misclassification error rate is little below .1
+print("CV Error Rate:")
+cvfit$cvm[which(cvfit$lambda==cvfit$lambda.min)]
+
+#Optimal penalty
+print("Penalty Value:")
+cvfit$lambda.min
+
+
+finalmodel<-glmnet(dat.train.x, dat.train.y, family = "binomial",lambda=cvfit$lambda.min)
+
+dat.test.x<-model.matrix(y~., mrkt_test)
+
+fit.pred.lasso <- predict(finalmodel, newx = dat.test.x, type = "response")
+
+cutoff<-0.5
+
+class.lasso<-factor(ifelse(fit.pred.lasso>cutoff,"yes","no"),levels=c("no","yes"))
+
+
+#Confusion Matrix for Lasso
+conf.lasso<-table(class.lasso,mrkt_test$y)
+print("Confusion matrix for LASSO")
+conf.lasso
+
+print("Overall accuracy for LASSO and Stepwise respectively")
+sum(diag(conf.lasso))/sum(conf.lasso)
+
 
 
