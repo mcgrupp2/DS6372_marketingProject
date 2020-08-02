@@ -5,6 +5,8 @@ library(naniar) # has miss_var graph
 library(GGally)
 library(ROSE)
 library(glmnet)
+library(corrplot)
+library(gplots)
 
 ## Input variables:
 
@@ -30,7 +32,7 @@ library(glmnet)
 ## # other attributes:
 ## 12 - campaign (numeric, includes last contact)
 ## 13 - pdays: (numeric; 999 means client was not previously contacted)
-## 14 - previous: (numeric)
+## 14 - previous: number of contacts performed before this campaign and for this client (numeric)
 ## 15 - poutcome: (categorical: 'failure','nonexistent','success')
 
 
@@ -162,6 +164,24 @@ mrkt_raw %>%
     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
   )
 
+
+# Exploring categorical 
+
+mrkt_raw %>%
+  ggplot() +
+  geom_histogram(
+    aes(
+      x = reorder(job,job,function(x) -length(x))
+    ),
+    stat="count"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  )
+  
+
+
+
 # Exploring the numeric variables
 
 # numeric c(1, 11, 12, 13, 14, 16, 17, 18, 19, 20)
@@ -290,6 +310,9 @@ mrkt_raw %>%
   )
 
 
+## I'm going to try to convert these columns to factors for modelling c(12,13,14,16,20)
+## These are basically what I would think are this company specific, not the indexes
+
 
 ## Exploring the response variable to get a sense of what are percentage splits are
 
@@ -334,6 +357,8 @@ dim(mrkt_test %>% filter(mrkt_test[,21] == 'no'))[1]/dim(mrkt_test)[1] * 100
 
 
 
+## Some downsampling, I couldn't get it to work on the prediction, will debug
+
 mrkt_downSample <- downSample(x = mrkt_train[, -ncol(mrkt_train)],
                          y = mrkt_train$y)
 
@@ -362,12 +387,20 @@ roc.curve(mrkt_test$y, mrkt_log_rose.pred, add.roc=TRUE, col=2)
 roc.curve(mrkt_test$y, mrkt_logit.pred, add.roc=TRUE, col=3)
 
 dat.train.x <- model.matrix(y~., mrkt_train)
-dat.train.y<-mrkt_train[,21]
-cvfit <- cv.glmnet(dat.train.x, dat.train.y, family = "binomial", type.measure = "class", nlambda = 100)
+dat.train.y <- mrkt_train[,21]
+
+## CAREFUL of the nlambda, I was crashing R with 100
+
+cvfit <- cv.glmnet(dat.train.x, dat.train.y, family = "binomial", type.measure = "class", nlambda = 25)
+
 plot(cvfit)
+
 coef(cvfit, s = "lambda.min")
+
 #CV misclassification error rate is little below .1
+
 print("CV Error Rate:")
+
 cvfit$cvm[which(cvfit$lambda==cvfit$lambda.min)]
 
 #Optimal penalty
@@ -387,12 +420,19 @@ class.lasso<-factor(ifelse(fit.pred.lasso>cutoff,"yes","no"),levels=c("no","yes"
 
 
 #Confusion Matrix for Lasso
+
 conf.lasso<-table(class.lasso,mrkt_test$y)
 print("Confusion matrix for LASSO")
 conf.lasso
 
 print("Overall accuracy for LASSO and Stepwise respectively")
 sum(diag(conf.lasso))/sum(conf.lasso)
+
+
+# Correlation Matrix of "numerics"
+
+correlationMatrix <- cor(mrkt_raw[,c(1,11,12,14,16,17,18,19,20)], use="pairwise.complete.obs")
+corrplot(correlationMatrix, tl.cex = 0.5)
 
 
 
