@@ -178,7 +178,103 @@ mrkt_raw %>%
   theme(
     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
   )
+
+mrkt_raw %>%
+  ggplot() +
+  geom_histogram(
+    aes(
+      x = reorder(marital,marital,function(x) -length(x))
+    ),
+    stat="count"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  )
+
+mrkt_raw %>%
+  ggplot() +
+  geom_histogram(
+    aes(
+      x = reorder(education,education,function(x) -length(x))
+    ),
+    stat="count"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  )
+
+mrkt_raw %>%
+  ggplot() +
+  geom_histogram(
+    aes(
+      x = reorder(default,default,function(x) -length(x))
+    ),
+    stat="count"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  )
+
+mrkt_raw %>%
+  ggplot() +
+  geom_histogram(
+    aes(
+      x = reorder(housing,housing,function(x) -length(x))
+    ),
+    stat="count"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  )
+
+mrkt_raw %>%
+  ggplot() +
+  geom_histogram(
+    aes(
+      x = reorder(loan,loan,function(x) -length(x))
+    ),
+    stat="count"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  )
+
+mrkt_raw %>%
+  ggplot() +
+  geom_histogram(
+    aes(
+      x = reorder(contact,contact,function(x) -length(x))
+    ),
+    stat="count"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  )
+
+mrkt_raw %>%
+  ggplot() +
+  geom_histogram(
+    aes(
+      x = reorder(month,month,function(x) -length(x))
+    ),
+    stat="count"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  )
   
+
+mrkt_raw %>%
+  ggplot() +
+  geom_histogram(
+    aes(
+      x = reorder(day_of_week,day_of_week,function(x) -length(x))
+    ),
+    stat="count"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  )
 
 
 
